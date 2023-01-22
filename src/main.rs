@@ -7,7 +7,7 @@ use std::{env, io};
 
 fn main() -> io::Result<()> {
     let mut args = env::args().collect::<Vec<String>>();
-    args.pop();
+    args.remove(0);
 
     return lox::run(args);
 }
