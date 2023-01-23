@@ -59,10 +59,10 @@ fn run_prompt() -> io::Result<()> {
 }
 
 fn run_source(source: String) {
-    let mut scanner = Scanner::new(source);
+    let scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
 
-    for token in &*tokens.borrow() {
+    for token in tokens {
         println!("{token:?}");
     }
 }
