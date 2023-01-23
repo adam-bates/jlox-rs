@@ -3,7 +3,7 @@ use crate::token::Token;
 // Manually writing this part out
 // as it seems easier than translating the Java generation code
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(LiteralExpr),
     Unary(UnaryExpr),
@@ -11,10 +11,10 @@ pub enum Expr {
     Grouping(GroupingExpr),
 }
 
-#[derive(Debug, Clone)]
-pub struct LiteralExpr(LiteralExprType, Token);
+#[derive(Debug, Clone, PartialEq)]
+pub struct LiteralExpr(pub LiteralExprType, pub Token);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LiteralExprType {
     Number,
     String,
@@ -23,26 +23,26 @@ pub enum LiteralExprType {
     Nil,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnaryExpr {
     pub op: (UnaryExprOp, Token),
     pub right: Box<Expr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryExprOp {
     Minus,
     Not,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
     pub left: Box<Expr>,
     pub op: (BinaryExprOp, Token),
     pub right: Box<Expr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryExprOp {
     EqualEqual,
     NotEqual,
@@ -56,7 +56,7 @@ pub enum BinaryExprOp {
     Divide,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GroupingExpr {
     pub left: Token,
     pub expr: Box<Expr>,

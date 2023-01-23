@@ -1,4 +1,4 @@
-use crate::scanner::Scanner;
+use crate::{scanner::Scanner, token::Token, token_type::TokenType};
 
 use std::{fs, io, path, process};
 
@@ -69,6 +69,14 @@ fn run_source(source: String) {
 
 pub fn error(line: usize, message: &str) {
     report(line, "", message);
+}
+
+pub fn token_error(token: Token, message: &str) {
+    if token.token_type == TokenType::EOF {
+        report(token.line, " at end", message);
+    } else {
+        report(token.line, &format!("at '{}'", token.lexeme), message);
+    }
 }
 
 fn report(line: usize, where_: &str, message: &str) {
