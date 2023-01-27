@@ -16,6 +16,13 @@ impl Parser {
         return Self { tokens, current: 0 };
     }
 
+    pub fn parse(&mut self) -> Option<Expr> {
+        match self.expression() {
+            Ok(expr) => return Some(expr),
+            Err(_) => return None,
+        }
+    }
+
     fn expression(&mut self) -> Result<Expr> {
         return self.equality();
     }
@@ -170,7 +177,7 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr> {
-        let token = self.previous().unwrap().clone();
+        let token = self.peek().unwrap().clone();
 
         if self.match_any(&[TokenType::False]) {
             return Ok(Expr::Literal(LiteralExpr(LiteralExprType::False, token)));
@@ -217,10 +224,17 @@ impl Parser {
             }));
         }
 
-        return Err(self.error(
-            format!("[{}:{}] Expected some expression.", file!(), line!()),
-            token,
-        ));
+        if let Some(peek) = self.peek() {
+            return Err(self.error(
+                format!("[{}:{}] Expected some expression.", file!(), line!()),
+                peek.clone(),
+            ));
+        } else {
+            return Err(self.error(
+                format!("[{}:{}] Unexpected end of file.", file!(), line!()),
+                token,
+            ));
+        }
     }
 
     fn match_any(&mut self, token_types: &[TokenType]) -> bool {
@@ -245,6 +259,34 @@ impl Parser {
     fn error(&self, message: String, token: Token) -> ParserError {
         lox::token_error(token, &message);
         return ParserError { message };
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if let Some(prev) = self.previous() {
+                if prev.token_type == TokenType::Semicolon {
+                    return;
+                }
+            }
+
+            if let Some(peek) = self.peek() {
+                match peek.token_type {
+                    TokenType::Class
+                    | TokenType::For
+                    | TokenType::Fun
+                    | TokenType::If
+                    | TokenType::Print
+                    | TokenType::Return
+                    | TokenType::Var
+                    | TokenType::While => return,
+                    _ => {}
+                }
+            }
+
+            self.advance();
+        }
     }
 
     fn check(&self, token_type: &TokenType) -> bool {
@@ -287,6 +329,10 @@ impl Parser {
     }
 
     fn previous(&self) -> Option<&Token> {
+        if self.current == 0 {
+            return None;
+        }
+
         return self.tokens.get(self.current - 1);
     }
 }

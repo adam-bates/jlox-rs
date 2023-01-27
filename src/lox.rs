@@ -1,8 +1,8 @@
-use crate::{scanner::Scanner, token::Token, token_type::TokenType};
+use crate::{scanner::Scanner, token::Token, token_type::TokenType, parser::Parser};
 
 use std::{fs, io, path, process};
 
-pub fn run(mut args: Vec<String>) -> io::Result<()> {
+pub fn run_lox(mut args: Vec<String>) -> io::Result<()> {
     if args.len() > 1 {
         println!("Usage: jlox [script]");
         process::exit(64);
@@ -24,7 +24,7 @@ pub fn had_error() -> bool {
 fn run_file(path: String) -> io::Result<()> {
     let content = fs::read_to_string(path::PathBuf::from(path))?;
 
-    run_source(content);
+    run(content);
 
     if had_error() {
         // Indicate an error in the exit code
@@ -48,7 +48,7 @@ fn run_prompt() -> io::Result<()> {
             break;
         }
 
-        run_source(line);
+        run(line);
 
         unsafe {
             HAD_ERROR = false;
@@ -58,13 +58,19 @@ fn run_prompt() -> io::Result<()> {
     Ok(())
 }
 
-fn run_source(source: String) {
+fn run(source: String) {
     let scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
 
-    for token in tokens {
-        println!("{token:?}");
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse();
+
+    // Stop if there was a syntax error
+    if had_error() {
+        return;
     }
+
+    dbg!(expr);
 }
 
 pub fn error(line: usize, message: &str) {
@@ -75,7 +81,7 @@ pub fn token_error(token: Token, message: &str) {
     if token.token_type == TokenType::EOF {
         report(token.line, " at end", message);
     } else {
-        report(token.line, &format!("at '{}'", token.lexeme), message);
+        report(token.line, &format!(" at '{}'", token.lexeme), message);
     }
 }
 

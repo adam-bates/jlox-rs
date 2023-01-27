@@ -11,5 +11,5 @@ fn main() -> io::Result<()> {
     let mut args = env::args().collect::<Vec<String>>();
     args.remove(0);
 
-    return lox::run(args);
+    return lox::run_lox(args);
 }
