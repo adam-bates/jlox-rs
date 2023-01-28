@@ -1,3 +1,5 @@
+use crate::string::LoxStr;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens
@@ -25,7 +27,7 @@ pub enum TokenType {
 
     // Literals
     Identifier,
-    String(String),
+    String(LoxStr),
     Number(f64),
 
     // Keywords

@@ -59,7 +59,7 @@ fn run_prompt() -> io::Result<()> {
 }
 
 fn run(source: String) {
-    let scanner = Scanner::new(source);
+    let scanner = Scanner::new(source.into());
     let tokens = scanner.scan_tokens();
 
     let mut parser = Parser::new(tokens);

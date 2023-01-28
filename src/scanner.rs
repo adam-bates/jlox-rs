@@ -1,4 +1,4 @@
-use crate::{lox, token::Token, token_type::TokenType};
+use crate::{lox, token::Token, token_type::TokenType, string::LoxStr};
 
 use std::{collections::HashMap, iter::Iterator};
 
@@ -28,7 +28,7 @@ lazy_static! {
 }
 
 pub struct Scanner {
-    source: String,
+    source: LoxStr,
     source_chars: Vec<char>,
     tokens: Vec<Token>,
 
@@ -38,7 +38,7 @@ pub struct Scanner {
 }
 
 impl Scanner {
-    pub fn new(source: String) -> Self {
+    pub fn new(source: LoxStr) -> Self {
         return Self {
             source_chars: source.chars().collect(),
             source,
@@ -58,7 +58,7 @@ impl Scanner {
 
         self.tokens.push(Token {
             token_type: TokenType::EOF,
-            lexeme: "".to_string(),
+            lexeme: "".into(),
             line: self.line,
         });
 
@@ -159,7 +159,7 @@ impl Scanner {
 
         // Trim the surrounding quotes
         let value = self.source[self.start + 1..self.current - 1].to_string();
-        return TokenType::String(value);
+        return TokenType::String(value.into());
     }
 
     fn number(&mut self) -> TokenType {
@@ -268,7 +268,7 @@ impl Scanner {
 
         self.tokens.push(Token {
             token_type,
-            lexeme: text.to_string(),
+            lexeme: text.to_string().into(),
             line: self.line,
         });
     }

@@ -35,7 +35,7 @@ impl Parser {
 
             let op = match op_token.token_type {
                 TokenType::BangEqual => (BinaryExprOp::NotEqual, op_token),
-                TokenType::EqualEqual => (BinaryExprOp::NotEqual, op_token),
+                TokenType::EqualEqual => (BinaryExprOp::EqualEqual, op_token),
                 _ => {
                     return Err(self.error(
                         format!("[{}:{}] Expected '!=' or '=='", file!(), line!()),
