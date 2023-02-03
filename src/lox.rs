@@ -1,4 +1,7 @@
-use crate::{scanner::Scanner, token::Token, token_type::TokenType, parser::Parser};
+use crate::{
+    interpreter::Interpreter, parser::Parser, runtime_value::RuntimeError, scanner::Scanner,
+    token::Token, token_type::TokenType,
+};
 
 use std::{fs, io, path, process};
 
@@ -16,25 +19,38 @@ pub fn run_lox(mut args: Vec<String>) -> io::Result<()> {
 }
 
 static mut HAD_ERROR: bool = false;
+static mut HAD_RUNTIME_ERROR: bool = false;
 
 pub fn had_error() -> bool {
     return unsafe { HAD_ERROR };
 }
 
+pub fn had_runtime_error() -> bool {
+    return unsafe { HAD_RUNTIME_ERROR };
+}
+
 fn run_file(path: String) -> io::Result<()> {
+    let mut interpreter = Interpreter;
+
     let content = fs::read_to_string(path::PathBuf::from(path))?;
 
-    run(content);
+    run(&mut interpreter, content);
 
+    // Indicate an error in the exit code
     if had_error() {
-        // Indicate an error in the exit code
         process::exit(65);
+    }
+
+    if had_runtime_error() {
+        process::exit(70);
     }
 
     Ok(())
 }
 
 fn run_prompt() -> io::Result<()> {
+    let mut interpreter = Interpreter;
+
     loop {
         // Flushing normally only happens on new-line,
         // Have to force in order to print on same line as accepting input
@@ -48,7 +64,7 @@ fn run_prompt() -> io::Result<()> {
             break;
         }
 
-        run(line);
+        run(&mut interpreter, line);
 
         unsafe {
             HAD_ERROR = false;
@@ -58,7 +74,7 @@ fn run_prompt() -> io::Result<()> {
     Ok(())
 }
 
-fn run(source: String) {
+fn run(interpreter: &mut Interpreter, source: String) {
     let scanner = Scanner::new(source.into());
     let tokens = scanner.scan_tokens();
 
@@ -70,11 +86,19 @@ fn run(source: String) {
         return;
     }
 
-    dbg!(expr);
+    if let Some(mut expr) = expr {
+        interpreter.interpret(&mut expr);
+    }
 }
 
 pub fn error(line: usize, message: &str) {
     report(line, "", message);
+}
+
+pub fn runtime_error(error: RuntimeError) {
+    eprintln!("{}", error);
+
+    unsafe { HAD_RUNTIME_ERROR = true };
 }
 
 pub fn token_error(token: Token, message: &str) {
