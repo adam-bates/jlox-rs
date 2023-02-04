@@ -1,12 +1,84 @@
 use crate::{
+    environment::Environment,
     expr::*,
+    lox,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
-    string::LoxStr, lox,
+    stmt::*,
+    string::LoxStr,
 };
 
-pub struct Interpreter;
+pub struct Interpreter {
+    environment: Environment,
+}
 
-impl Visitor<RuntimeResult> for Interpreter {
+impl Interpreter {
+    pub fn new() -> Self {
+        return Self {
+            environment: Environment::new(),
+        };
+    }
+
+    pub fn interpret(&mut self, statements: Vec<Stmt>) {
+        for mut statement in statements {
+            match self.execute(&mut statement) {
+                Err(e) => {
+                    lox::runtime_error(e);
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn execute(&mut self, stmt: &mut Stmt) -> RuntimeResult<()> {
+        return stmt.accept(self);
+    }
+
+    fn evaluate(&mut self, expr: &mut Expr) -> RuntimeResult {
+        return expr.accept(self);
+    }
+
+    fn is_truthy(&self, value: &RuntimeValue) -> bool {
+        if let RuntimeValue::Nil = value {
+            return false;
+        }
+
+        if let RuntimeValue::Boolean(value) = value {
+            return *value;
+        }
+
+        return true;
+    }
+
+    fn is_equal(&self, left: &RuntimeValue, right: &RuntimeValue) -> bool {
+        return left == right;
+    }
+
+    fn stringify(&self, value: &RuntimeValue) -> LoxStr {
+        match value {
+            RuntimeValue::Nil => return "nil".into(),
+
+            RuntimeValue::Number(value) => {
+                let mut text = value.to_string();
+
+                if text.ends_with(".0") {
+                    text.pop(); // 123.0 -> 123.
+                    text.pop(); // 123.  -> 123
+                }
+
+                return text.into();
+            }
+
+            RuntimeValue::String(value) => return value.clone(),
+
+            RuntimeValue::Boolean(value) => return value.to_string().into(),
+
+            RuntimeValue::Object(value) => return self.stringify(value),
+        }
+    }
+}
+
+impl ExprVisitor<RuntimeResult> for Interpreter {
     fn visit_literal_expr(&mut self, expr: &mut LiteralExpr) -> RuntimeResult {
         return Ok(RuntimeValue::from(&*expr));
     }
@@ -103,60 +175,36 @@ impl Visitor<RuntimeResult> for Interpreter {
             }
         }
     }
+
+    fn visit_variable_expr(&mut self, expr: &mut VariableExpr) -> RuntimeResult {
+        return self.environment.get(&expr.0).cloned();
+    }
 }
 
-impl Interpreter {
-    pub fn interpret(&mut self, expr: &mut Expr) {
-        match self.evaluate(expr) {
-            Ok(value) => {
-                println!("{}", self.stringify(&value));
-            }
-            Err(e) => {
-                lox::runtime_error(e);
-            }
-        }
+impl StmtVisitor<RuntimeResult<()>> for Interpreter {
+    fn visit_expression_stmt(&mut self, stmt: &mut ExpressionStmt) -> RuntimeResult<()> {
+        self.evaluate(&mut stmt.0)?;
+
+        return Ok(());
     }
 
-    fn evaluate(&mut self, expr: &mut Expr) -> RuntimeResult {
-        return expr.accept(self);
+    fn visit_print_stmt(&mut self, stmt: &mut PrintStmt) -> RuntimeResult<()> {
+        let value = self.evaluate(&mut stmt.0)?;
+
+        println!("{}", self.stringify(&value));
+
+        return Ok(());
     }
 
-    fn is_truthy(&self, value: &RuntimeValue) -> bool {
-        if let RuntimeValue::Nil = value {
-            return false;
-        }
+    fn visit_variable_stmt(&mut self, stmt: &mut VariableStmt) -> RuntimeResult<()> {
+        let value = if let Some(initializer) = &mut stmt.initializer {
+            self.evaluate(initializer)?
+        } else {
+            RuntimeValue::Nil
+        };
 
-        if let RuntimeValue::Boolean(value) = value {
-            return *value;
-        }
+        self.environment.define(stmt.name.lexeme.clone(), value);
 
-        return true;
-    }
-
-    fn is_equal(&self, left: &RuntimeValue, right: &RuntimeValue) -> bool {
-        return left == right;
-    }
-
-    fn stringify(&self, value: &RuntimeValue) -> LoxStr {
-        match value {
-            RuntimeValue::Nil => return "nil".into(),
-
-            RuntimeValue::Number(value) => {
-                let mut text = value.to_string();
-
-                if text.ends_with(".0") {
-                    text.pop(); // 123.0 -> 123.
-                    text.pop(); // 123.  -> 123
-                }
-
-                return text.into();
-            }
-
-            RuntimeValue::String(value) => return value.clone(),
-
-            RuntimeValue::Boolean(value) => return value.to_string().into(),
-
-            RuntimeValue::Object(value) => return self.stringify(value),
-        }
+        return Ok(());
     }
 }

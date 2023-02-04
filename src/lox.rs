@@ -30,7 +30,7 @@ pub fn had_runtime_error() -> bool {
 }
 
 fn run_file(path: String) -> io::Result<()> {
-    let mut interpreter = Interpreter;
+    let mut interpreter = Interpreter::new();
 
     let content = fs::read_to_string(path::PathBuf::from(path))?;
 
@@ -49,7 +49,7 @@ fn run_file(path: String) -> io::Result<()> {
 }
 
 fn run_prompt() -> io::Result<()> {
-    let mut interpreter = Interpreter;
+    let mut interpreter = Interpreter::new();
 
     loop {
         // Flushing normally only happens on new-line,
@@ -79,16 +79,14 @@ fn run(interpreter: &mut Interpreter, source: String) {
     let tokens = scanner.scan_tokens();
 
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse();
+    let statements = parser.parse();
 
     // Stop if there was a syntax error
     if had_error() {
         return;
     }
 
-    if let Some(mut expr) = expr {
-        interpreter.interpret(&mut expr);
-    }
+    interpreter.interpret(statements);
 }
 
 pub fn error(line: usize, message: &str) {

@@ -1,10 +1,10 @@
-use crate::{expr::*, string::LoxStr, token_type::TokenType};
+use crate::{expr::*, string::LoxStr, token::Token, token_type::TokenType};
 
 use thiserror::Error;
 
 pub type RuntimeResult<T = RuntimeValue, E = RuntimeError> = Result<T, E>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeValue {
     Nil,
     Boolean(bool),
@@ -42,6 +42,12 @@ pub enum RuntimeError {
     #[error("invalid binary expression: {expr:#?}. Details = {details:?}")]
     InvalidBinaryExpr {
         expr: BinaryExpr,
+        details: Option<String>,
+    },
+
+    #[error("undefined variable: {name:#?}. Details = {details:?}")]
+    UndefinedVariable {
+        name: Token,
         details: Option<String>,
     },
 }
