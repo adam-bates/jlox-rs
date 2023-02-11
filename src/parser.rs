@@ -64,6 +64,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt> {
+        if self.match_any(&[TokenType::If]) {
+            return self.if_statement();
+        }
+
         if self.match_any(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -73,6 +77,28 @@ impl Parser {
         }
 
         return self.expression_statement();
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt> {
+        self.consume(&TokenType::LeftParen, "Expect '(' after 'if'".to_string())?;
+        let condition = self.expression()?;
+        self.consume(
+            &TokenType::RightParen,
+            "Expect ')' after if condition".to_string(),
+        )?;
+
+        let then_branch = self.statement()?;
+        let else_branch = if self.match_any(&[TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+
+        return Ok(Stmt::If(IfStmt {
+            condition,
+            then_branch: Box::new(then_branch),
+            else_branch,
+        }));
     }
 
     fn print_statement(&mut self) -> Result<Stmt> {
@@ -101,7 +127,7 @@ impl Parser {
             }
         }
 
-        self.consume(&TokenType::RightBrace, format!("Expect '}}' after block"));
+        self.consume(&TokenType::RightBrace, "Expect '}' after block".to_string())?;
 
         return Ok(statements);
     }

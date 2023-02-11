@@ -256,4 +256,16 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
 
         return Ok(());
     }
+
+    fn visit_if_stmt(&mut self, stmt: &mut IfStmt) -> RuntimeResult<()> {
+        let mut condition = self.evaluate(&mut stmt.condition)?;
+
+        if self.is_truthy(&mut condition) {
+            self.execute(&mut stmt.then_branch)?;
+        } else if let Some(else_branch) = &mut stmt.else_branch {
+            self.execute(else_branch)?;
+        }
+
+        return Ok(());
+    }
 }
