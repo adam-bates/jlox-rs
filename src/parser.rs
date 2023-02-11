@@ -68,6 +68,10 @@ impl Parser {
             return self.print_statement();
         }
 
+        if self.match_any(&[TokenType::LeftBrace]) {
+            return Ok(Stmt::Block(BlockStmt(self.block()?)));
+        }
+
         return self.expression_statement();
     }
 
@@ -88,8 +92,46 @@ impl Parser {
         return Ok(Stmt::Expression(ExpressionStmt(expr)));
     }
 
+    fn block(&mut self) -> Result<Vec<Stmt>> {
+        let mut statements = vec![];
+
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            if let Some(statement) = self.declaration() {
+                statements.push(statement);
+            }
+        }
+
+        self.consume(&TokenType::RightBrace, format!("Expect '}}' after block"));
+
+        return Ok(statements);
+    }
+
     fn expression(&mut self) -> Result<Expr> {
-        return self.equality();
+        return self.assignment();
+    }
+
+    fn assignment(&mut self) -> Result<Expr> {
+        let expr = self.equality()?;
+
+        if self.match_any(&[TokenType::Equal]) {
+            let equals = self.previous().cloned();
+            let value = self.assignment()?;
+
+            if let Expr::Variable(expr) = expr {
+                let name = expr.0;
+                return Ok(Expr::Assignment(AssignmentExpr {
+                    name,
+                    value: Box::new(value),
+                }));
+            }
+
+            return Err(self.error(
+                format!("[{}:{}] Invalid assignment target", file!(), line!()),
+                equals.unwrap(),
+            ));
+        }
+
+        return Ok(expr);
     }
 
     fn equality(&mut self) -> Result<Expr> {

@@ -5,10 +5,14 @@ use crate::{expr::Expr, token::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
+    Block(BlockStmt),
     Expression(ExpressionStmt),
     Print(PrintStmt),
     Variable(VariableStmt),
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BlockStmt(pub Vec<Stmt>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionStmt(pub Expr);
@@ -24,6 +28,7 @@ pub struct VariableStmt {
 
 // Visitor pattern
 pub trait StmtVisitor<R> {
+    fn visit_block_stmt(&mut self, stmt: &mut BlockStmt) -> R;
     fn visit_expression_stmt(&mut self, stmt: &mut ExpressionStmt) -> R;
     fn visit_print_stmt(&mut self, stmt: &mut PrintStmt) -> R;
     fn visit_variable_stmt(&mut self, stmt: &mut VariableStmt) -> R;
@@ -36,10 +41,17 @@ pub trait StmtAccept<R, V: StmtVisitor<R>> {
 impl<R, V: StmtVisitor<R>> StmtAccept<R, V> for Stmt {
     fn accept(&mut self, visitor: &mut V) -> R {
         return match self {
+            Self::Block(stmt) => stmt.accept(visitor),
             Self::Expression(stmt) => stmt.accept(visitor),
             Self::Print(stmt) => stmt.accept(visitor),
             Self::Variable(stmt) => stmt.accept(visitor),
         };
+    }
+}
+
+impl<R, V: StmtVisitor<R>> StmtAccept<R, V> for BlockStmt {
+    fn accept(&mut self, visitor: &mut V) -> R {
+        return visitor.visit_block_stmt(self);
     }
 }
 

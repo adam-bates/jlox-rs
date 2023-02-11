@@ -10,6 +10,7 @@ pub enum Expr {
     Binary(BinaryExpr),
     Grouping(GroupingExpr),
     Variable(VariableExpr),
+    Assignment(AssignmentExpr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -67,6 +68,12 @@ pub struct GroupingExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableExpr(pub Token);
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssignmentExpr {
+    pub name: Token,
+    pub value: Box<Expr>,
+}
+
 // Visitor pattern
 pub trait ExprVisitor<R> {
     fn visit_literal_expr(&mut self, expr: &mut LiteralExpr) -> R;
@@ -74,6 +81,7 @@ pub trait ExprVisitor<R> {
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) -> R;
     fn visit_grouping_expr(&mut self, expr: &mut GroupingExpr) -> R;
     fn visit_variable_expr(&mut self, expr: &mut VariableExpr) -> R;
+    fn visit_assignment_expr(&mut self, expr: &mut AssignmentExpr) -> R;
 }
 
 pub trait ExprAccept<R, V: ExprVisitor<R>> {
@@ -88,6 +96,7 @@ impl<R, V: ExprVisitor<R>> ExprAccept<R, V> for Expr {
             Self::Binary(expr) => expr.accept(visitor),
             Self::Grouping(expr) => expr.accept(visitor),
             Self::Variable(expr) => expr.accept(visitor),
+            Self::Assignment(expr) => expr.accept(visitor),
         };
     }
 }
@@ -119,5 +128,11 @@ impl<R, V: ExprVisitor<R>> ExprAccept<R, V> for GroupingExpr {
 impl<R, V: ExprVisitor<R>> ExprAccept<R, V> for VariableExpr {
     fn accept(&mut self, visitor: &mut V) -> R {
         return visitor.visit_variable_expr(self);
+    }
+}
+
+impl<R, V: ExprVisitor<R>> ExprAccept<R, V> for AssignmentExpr {
+    fn accept(&mut self, visitor: &mut V) -> R {
+        return visitor.visit_assignment_expr(self);
     }
 }

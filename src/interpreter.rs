@@ -7,14 +7,16 @@ use crate::{
     string::LoxStr,
 };
 
+use std::{cell::RefCell, rc::Rc};
+
 pub struct Interpreter {
-    environment: Environment,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         return Self {
-            environment: Environment::new(),
+            environment: Rc::new(RefCell::new(Environment::new())),
         };
     }
 
@@ -36,6 +38,30 @@ impl Interpreter {
 
     fn evaluate(&mut self, expr: &mut Expr) -> RuntimeResult {
         return expr.accept(self);
+    }
+
+    fn execute_block(
+        &mut self,
+        statements: &mut Vec<Stmt>,
+        environment: Rc<RefCell<Environment>>,
+    ) -> RuntimeResult<()> {
+        let previous = Rc::clone(&self.environment);
+
+        self.environment = environment;
+
+        let try_execute_block = || -> RuntimeResult<()> {
+            for statement in statements {
+                self.execute(statement)?;
+            }
+
+            return Ok(());
+        };
+
+        let res = try_execute_block();
+
+        self.environment = previous;
+
+        return res;
     }
 
     fn is_truthy(&self, value: &RuntimeValue) -> bool {
@@ -177,7 +203,17 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
     }
 
     fn visit_variable_expr(&mut self, expr: &mut VariableExpr) -> RuntimeResult {
-        return self.environment.get(&expr.0).cloned();
+        return self.environment.borrow().get(&expr.0);
+    }
+
+    fn visit_assignment_expr(&mut self, expr: &mut AssignmentExpr) -> RuntimeResult {
+        let value = self.evaluate(&mut expr.value)?;
+
+        self.environment
+            .borrow_mut()
+            .assign(expr.name.clone(), value.clone())?;
+
+        return Ok(value);
     }
 }
 
@@ -203,7 +239,20 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
             RuntimeValue::Nil
         };
 
-        self.environment.define(stmt.name.lexeme.clone(), value);
+        self.environment
+            .borrow_mut()
+            .define(stmt.name.lexeme.clone(), value);
+
+        return Ok(());
+    }
+
+    fn visit_block_stmt(&mut self, stmt: &mut BlockStmt) -> RuntimeResult<()> {
+        self.execute_block(
+            &mut stmt.0,
+            Rc::new(RefCell::new(Environment::enclosed(Rc::clone(
+                &self.environment,
+            )))),
+        )?;
 
         return Ok(());
     }
