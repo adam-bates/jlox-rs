@@ -72,6 +72,10 @@ impl Parser {
             return self.while_statement();
         }
 
+        if self.match_any(&[TokenType::For]) {
+            return self.for_statement();
+        }
+
         if self.match_any(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -122,6 +126,73 @@ impl Parser {
             condition,
             body: Box::new(body),
         }));
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt> {
+        self.consume(&TokenType::LeftParen, "Expect '(' after 'for'".to_string())?;
+
+        let initializer = if self.match_any(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_any(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let mut condition = if !self.check(&TokenType::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            &TokenType::Semicolon,
+            "Expect ';' after for clauses".to_string(),
+        )?;
+
+        let increment = if !self.check(&TokenType::RightParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            &TokenType::RightParen,
+            "Expect ')' after for clauses".to_string(),
+        )?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Stmt::Block(BlockStmt(vec![
+                body,
+                Stmt::Expression(ExpressionStmt(increment)),
+            ]));
+        }
+
+        let condition = if let Some(condition) = condition {
+            condition
+        } else {
+            Expr::Literal(LiteralExpr(
+                LiteralExprType::True,
+                Token {
+                    lexeme: "true".into(),
+                    line: 0,
+                    token_type: TokenType::True,
+                },
+            ))
+        };
+
+        body = Stmt::While(WhileStmt {
+            condition,
+            body: Box::new(body),
+        });
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(BlockStmt(vec![initializer, body]));
+        }
+
+        return Ok(body);
     }
 
     fn print_statement(&mut self) -> Result<Stmt> {
