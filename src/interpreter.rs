@@ -101,6 +101,8 @@ impl Interpreter {
             RuntimeValue::Boolean(value) => return value.to_string().into(),
 
             RuntimeValue::Object(value) => return self.stringify(value),
+
+            RuntimeValue::LoxCallable(callable) => return format!("{:?}", callable).into(),
         }
     }
 }
@@ -217,6 +219,32 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
                 });
             }
         }
+    }
+
+    fn visit_call_expr(&mut self, expr: &mut CallExpr) -> RuntimeResult {
+        let callee = self.evaluate(&mut expr.callee)?;
+
+        let mut arguments = vec![];
+        for argument in &mut expr.arguments {
+            arguments.push(self.evaluate(argument)?);
+        }
+
+        let RuntimeValue::LoxCallable(mut function) = callee else {
+            return Err(RuntimeError::InvalidCallable {
+                value: callee,
+                details: Some("Can only call functions and classes".to_string()),
+            });
+        };
+
+        if arguments.len() != function.0.arity() {
+            return Err(RuntimeError::WrongNumberOfArgs {
+                expected: function.0.arity(),
+                found: arguments.len(),
+                details: Some(format!("Expr: {expr:?}")),
+            });
+        }
+
+        return function.0.call(self, arguments);
     }
 
     fn visit_variable_expr(&mut self, expr: &mut VariableExpr) -> RuntimeResult {

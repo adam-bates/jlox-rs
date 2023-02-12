@@ -1,4 +1,8 @@
-use crate::{expr::*, string::LoxStr, token::Token, token_type::TokenType};
+use std::fmt;
+
+use crate::{
+    expr::*, lox_callable::LoxCallable, string::LoxStr, token::Token, token_type::TokenType,
+};
 
 use thiserror::Error;
 
@@ -11,6 +15,26 @@ pub enum RuntimeValue {
     Number(f64),
     String(LoxStr),
     Object(Box<RuntimeValue>),
+    LoxCallable(LoxCallableValue),
+}
+
+pub struct LoxCallableValue(pub Box<dyn LoxCallable>);
+impl PartialEq for LoxCallableValue {
+    fn eq(&self, _: &Self) -> bool {
+        return false;
+    }
+}
+
+impl Clone for LoxCallableValue {
+    fn clone(&self) -> Self {
+        unimplemented!()
+    }
+}
+
+impl fmt::Debug for LoxCallableValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        return write!(f, "<callable function>");
+    }
 }
 
 impl From<&LiteralExpr> for RuntimeValue {
@@ -50,4 +74,17 @@ pub enum RuntimeError {
         name: Token,
         details: Option<String>,
     },
+
+    #[error("invalid callable: {value:#?}. Details = {details:?}")]
+    InvalidCallable {
+        value: RuntimeValue,
+        details: Option<String>,
+    },
+
+    #[error("function expected {expected} args, but call found {found}. Details = {details:?}")]
+    WrongNumberOfArgs {
+        expected: usize,
+        found: usize,
+        details: Option<String>,
+    }
 }
