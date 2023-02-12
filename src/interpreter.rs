@@ -5,6 +5,7 @@ use crate::{
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
     stmt::*,
     string::LoxStr,
+    token_type::TokenType,
 };
 
 use std::{cell::RefCell, rc::Rc};
@@ -107,6 +108,22 @@ impl Interpreter {
 impl ExprVisitor<RuntimeResult> for Interpreter {
     fn visit_literal_expr(&mut self, expr: &mut LiteralExpr) -> RuntimeResult {
         return Ok(RuntimeValue::from(&*expr));
+    }
+
+    fn visit_logical_expr(&mut self, expr: &mut LogicalExpr) -> RuntimeResult {
+        let left = self.evaluate(&mut expr.left)?;
+
+        if expr.operator.token_type == TokenType::Or {
+            if self.is_truthy(&left) {
+                return Ok(left);
+            }
+        } else {
+            if !self.is_truthy(&left) {
+                return Ok(left);
+            }
+        }
+
+        return self.evaluate(&mut expr.right);
     }
 
     fn visit_grouping_expr(&mut self, expr: &mut GroupingExpr) -> RuntimeResult {
@@ -264,6 +281,17 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
             self.execute(&mut stmt.then_branch)?;
         } else if let Some(else_branch) = &mut stmt.else_branch {
             self.execute(else_branch)?;
+        }
+
+        return Ok(());
+    }
+
+    fn visit_while_stmt(&mut self, stmt: &mut WhileStmt) -> RuntimeResult<()> {
+        while {
+            let condition = self.evaluate(&mut stmt.condition)?;
+            self.is_truthy(&condition)
+        } {
+            self.execute(&mut stmt.body)?;
         }
 
         return Ok(());

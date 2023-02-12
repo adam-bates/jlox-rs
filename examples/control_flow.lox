@@ -1,0 +1,17 @@
+var a = "a";
+var b = "b";
+
+if (a == "a") {
+    print a;
+} else {
+    print "uh oh!";
+}
+
+var i = 0;
+
+while (i < 10) {
+    print i;
+
+    i = i + 1;
+}
+

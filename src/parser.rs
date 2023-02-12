@@ -68,6 +68,10 @@ impl Parser {
             return self.if_statement();
         }
 
+        if self.match_any(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
         if self.match_any(&[TokenType::Print]) {
             return self.print_statement();
         }
@@ -98,6 +102,25 @@ impl Parser {
             condition,
             then_branch: Box::new(then_branch),
             else_branch,
+        }));
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt> {
+        self.consume(
+            &TokenType::LeftParen,
+            "Expect '(' after 'while'".to_string(),
+        )?;
+        let condition = self.expression()?;
+        self.consume(
+            &TokenType::RightParen,
+            "Expect ')' after while condition".to_string(),
+        )?;
+
+        let body = self.statement()?;
+
+        return Ok(Stmt::While(WhileStmt {
+            condition,
+            body: Box::new(body),
         }));
     }
 
@@ -137,7 +160,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_any(&[TokenType::Equal]) {
             let equals = self.previous().cloned();
@@ -155,6 +178,40 @@ impl Parser {
                 format!("[{}:{}] Invalid assignment target", file!(), line!()),
                 equals.unwrap(),
             ));
+        }
+
+        return Ok(expr);
+    }
+
+    fn or(&mut self) -> Result<Expr> {
+        let mut expr = self.and()?;
+
+        while self.match_any(&[TokenType::Or]) {
+            let operator = self.previous().unwrap().clone();
+            let right = self.and()?;
+
+            expr = Expr::Logical(LogicalExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        return Ok(expr);
+    }
+
+    fn and(&mut self) -> Result<Expr> {
+        let mut expr = self.equality()?;
+
+        while self.match_any(&[TokenType::And]) {
+            let operator = self.previous().unwrap().clone();
+            let right = self.equality()?;
+
+            expr = Expr::Logical(LogicalExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
         }
 
         return Ok(expr);

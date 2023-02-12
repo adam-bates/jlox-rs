@@ -10,6 +10,7 @@ pub enum Stmt {
     Print(PrintStmt),
     Variable(VariableStmt),
     If(IfStmt),
+    While(WhileStmt),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +35,12 @@ pub struct IfStmt {
     pub else_branch: Option<Box<Stmt>>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhileStmt {
+    pub condition: Expr,
+    pub body: Box<Stmt>,
+}
+
 // Visitor pattern
 pub trait StmtVisitor<R> {
     fn visit_block_stmt(&mut self, stmt: &mut BlockStmt) -> R;
@@ -41,6 +48,7 @@ pub trait StmtVisitor<R> {
     fn visit_print_stmt(&mut self, stmt: &mut PrintStmt) -> R;
     fn visit_variable_stmt(&mut self, stmt: &mut VariableStmt) -> R;
     fn visit_if_stmt(&mut self, stmt: &mut IfStmt) -> R;
+    fn visit_while_stmt(&mut self, stmt: &mut WhileStmt) -> R;
 }
 
 pub trait StmtAccept<R, V: StmtVisitor<R>> {
@@ -55,6 +63,7 @@ impl<R, V: StmtVisitor<R>> StmtAccept<R, V> for Stmt {
             Self::Print(stmt) => stmt.accept(visitor),
             Self::Variable(stmt) => stmt.accept(visitor),
             Self::If(stmt) => stmt.accept(visitor),
+            Self::While(stmt) => stmt.accept(visitor),
         };
     }
 }
@@ -86,5 +95,11 @@ impl<R, V: StmtVisitor<R>> StmtAccept<R, V> for VariableStmt {
 impl<R, V: StmtVisitor<R>> StmtAccept<R, V> for IfStmt {
     fn accept(&mut self, visitor: &mut V) -> R {
         return visitor.visit_if_stmt(self);
+    }
+}
+
+impl<R, V: StmtVisitor<R>> StmtAccept<R, V> for WhileStmt {
+    fn accept(&mut self, visitor: &mut V) -> R {
+        return visitor.visit_while_stmt(self);
     }
 }
