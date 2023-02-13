@@ -340,7 +340,7 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
     fn visit_function_stmt(&mut self, stmt: &mut FunctionStmt) -> RuntimeResult<()> {
         let name = stmt.name.lexeme.clone();
 
-        let function = LoxFunction::new(stmt.clone());
+        let function = LoxFunction::new(stmt.clone(), Rc::clone(&self.environment));
 
         self.environment.borrow_mut().define(
             name,

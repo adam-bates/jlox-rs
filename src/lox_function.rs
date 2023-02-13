@@ -10,11 +10,15 @@ use crate::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoxFunction {
     pub declaration: FunctionStmt,
+    pub closure: Rc<RefCell<Environment>>,
 }
 
 impl LoxFunction {
-    pub fn new(declaration: FunctionStmt) -> Self {
-        return Self { declaration };
+    pub fn new(declaration: FunctionStmt, closure: Rc<RefCell<Environment>>) -> Self {
+        return Self {
+            declaration,
+            closure,
+        };
     }
 
     pub fn arity(&self) -> usize {
@@ -26,7 +30,7 @@ impl LoxFunction {
         interpreter: &mut Interpreter,
         mut arguments: Vec<RuntimeValue>,
     ) -> RuntimeResult {
-        let mut environment = Environment::enclosed(Rc::clone(&interpreter.globals));
+        let mut environment = Environment::enclosed(Rc::clone(&self.closure));
 
         for i in 0..self.declaration.params.len() {
             let param = &self.declaration.params[i].lexeme;
