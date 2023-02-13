@@ -349,4 +349,14 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
 
         return Ok(());
     }
+
+    fn visit_return_stmt(&mut self, stmt: &mut ReturnStmt) -> RuntimeResult<()> {
+        let value = if let Some(value) = &mut stmt.value {
+            Some(self.evaluate(value)?)
+        } else {
+            None
+        };
+
+        return Err(RuntimeError::NonErrorReturnShortCircuit { value });
+    }
 }

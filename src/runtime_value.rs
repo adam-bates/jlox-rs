@@ -66,4 +66,9 @@ pub enum RuntimeError {
         found: usize,
         details: Option<String>,
     },
+
+    #[error("non-error return short-circuit")]
+    NonErrorReturnShortCircuit {
+        value: Option<RuntimeValue>,
+    },
 }

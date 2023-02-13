@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     environment::Environment,
     interpreter::Interpreter,
-    runtime_value::{RuntimeResult, RuntimeValue},
+    runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
     stmt::FunctionStmt,
 };
 
@@ -35,11 +35,17 @@ impl LoxFunction {
             environment.define(param.clone(), arg);
         }
 
-        interpreter.execute_block(
+        match interpreter.execute_block(
             &mut self.declaration.body,
             Rc::new(RefCell::new(environment)),
-        )?;
-
-        return Ok(RuntimeValue::Nil);
+        ) {
+            Ok(()) => {
+                return Ok(RuntimeValue::Nil);
+            }
+            Err(RuntimeError::NonErrorReturnShortCircuit { value }) => {
+                return Ok(value.unwrap_or_else(|| RuntimeValue::Nil));
+            }
+            Err(e) => return Err(e),
+        }
     }
 }

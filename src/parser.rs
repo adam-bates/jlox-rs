@@ -84,6 +84,10 @@ impl Parser {
             return self.print_statement();
         }
 
+        if self.match_any(&[TokenType::Return]) {
+            return self.return_statement();
+        }
+
         if self.match_any(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block(BlockStmt(self.block()?)));
         }
@@ -204,6 +208,26 @@ impl Parser {
         self.consume(&TokenType::Semicolon, "Expect ';' after value.".to_string())?;
 
         return Ok(Stmt::Print(PrintStmt(value)));
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt> {
+        let keyword = self.previous().cloned();
+
+        let value = if !self.check(&TokenType::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            &TokenType::Semicolon,
+            "Expect ';' after return value".to_string(),
+        )?;
+
+        return Ok(Stmt::Return(ReturnStmt {
+            keyword: keyword.unwrap(),
+            value,
+        }));
     }
 
     fn expression_statement(&mut self) -> Result<Stmt> {
