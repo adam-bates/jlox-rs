@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::{
     expr::*, lox_callable::LoxCallable, string::LoxStr, token::Token, token_type::TokenType,
 };
@@ -15,26 +13,7 @@ pub enum RuntimeValue {
     Number(f64),
     String(LoxStr),
     Object(Box<RuntimeValue>),
-    LoxCallable(LoxCallableValue),
-}
-
-pub struct LoxCallableValue(pub Box<dyn LoxCallable>);
-impl PartialEq for LoxCallableValue {
-    fn eq(&self, _: &Self) -> bool {
-        return false;
-    }
-}
-
-impl Clone for LoxCallableValue {
-    fn clone(&self) -> Self {
-        unimplemented!()
-    }
-}
-
-impl fmt::Debug for LoxCallableValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "<callable function>");
-    }
+    LoxCallable(LoxCallable),
 }
 
 impl From<&LiteralExpr> for RuntimeValue {
@@ -86,5 +65,5 @@ pub enum RuntimeError {
         expected: usize,
         found: usize,
         details: Option<String>,
-    }
+    },
 }

@@ -2,6 +2,8 @@ use crate::{
     environment::Environment,
     expr::*,
     lox,
+    lox_callable::{Clock, LoxCallable},
+    lox_function::LoxFunction,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
     stmt::*,
     string::LoxStr,
@@ -11,13 +13,23 @@ use crate::{
 use std::{cell::RefCell, rc::Rc};
 
 pub struct Interpreter {
+    pub globals: Rc<RefCell<Environment>>,
+
     environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let globals = Rc::new(RefCell::new(Environment::new()));
+
+        globals.borrow_mut().define(
+            "clock".into(),
+            RuntimeValue::LoxCallable(LoxCallable::Clock(Clock)),
+        );
+
         return Self {
-            environment: Rc::new(RefCell::new(Environment::new())),
+            environment: Rc::clone(&globals),
+            globals,
         };
     }
 
@@ -33,15 +45,7 @@ impl Interpreter {
         }
     }
 
-    fn execute(&mut self, stmt: &mut Stmt) -> RuntimeResult<()> {
-        return stmt.accept(self);
-    }
-
-    fn evaluate(&mut self, expr: &mut Expr) -> RuntimeResult {
-        return expr.accept(self);
-    }
-
-    fn execute_block(
+    pub fn execute_block(
         &mut self,
         statements: &mut Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
@@ -63,6 +67,14 @@ impl Interpreter {
         self.environment = previous;
 
         return res;
+    }
+
+    fn execute(&mut self, stmt: &mut Stmt) -> RuntimeResult<()> {
+        return stmt.accept(self);
+    }
+
+    fn evaluate(&mut self, expr: &mut Expr) -> RuntimeResult {
+        return expr.accept(self);
     }
 
     fn is_truthy(&self, value: &RuntimeValue) -> bool {
@@ -236,15 +248,15 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
             });
         };
 
-        if arguments.len() != function.0.arity() {
+        if arguments.len() != function.arity() {
             return Err(RuntimeError::WrongNumberOfArgs {
-                expected: function.0.arity(),
+                expected: function.arity(),
                 found: arguments.len(),
                 details: Some(format!("Expr: {expr:?}")),
             });
         }
 
-        return function.0.call(self, arguments);
+        return function.call(self, arguments);
     }
 
     fn visit_variable_expr(&mut self, expr: &mut VariableExpr) -> RuntimeResult {
@@ -321,6 +333,19 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
         } {
             self.execute(&mut stmt.body)?;
         }
+
+        return Ok(());
+    }
+
+    fn visit_function_stmt(&mut self, stmt: &mut FunctionStmt) -> RuntimeResult<()> {
+        let name = stmt.name.lexeme.clone();
+
+        let function = LoxFunction::new(stmt.clone());
+
+        self.environment.borrow_mut().define(
+            name,
+            RuntimeValue::LoxCallable(LoxCallable::LoxFunction(function)),
+        );
 
         return Ok(());
     }

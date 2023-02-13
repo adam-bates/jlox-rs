@@ -1,4 +1,4 @@
-use crate::{expr::*, lox, stmt::*, token::Token, token_type::TokenType};
+use crate::{expr::*, lox, stmt::*, string::LoxStr, token::Token, token_type::TokenType};
 
 pub type Result<T = ()> = std::result::Result<T, ParserError>;
 
@@ -30,11 +30,15 @@ impl Parser {
 
     fn declaration(&mut self) -> Option<Stmt> {
         fn try_declaration(this: &mut Parser) -> Result<Stmt> {
+            if this.match_any(&[TokenType::Fun]) {
+                return Ok(Stmt::Function(this.function("function".into())?));
+            }
+
             if this.match_any(&[TokenType::Var]) {
                 return this.var_declaration();
-            } else {
-                return this.statement();
             }
+
+            return this.statement();
         }
 
         match try_declaration(self) {
@@ -139,7 +143,7 @@ impl Parser {
             Some(self.expression_statement()?)
         };
 
-        let mut condition = if !self.check(&TokenType::Semicolon) {
+        let condition = if !self.check(&TokenType::Semicolon) {
             Some(self.expression()?)
         } else {
             None
@@ -210,6 +214,53 @@ impl Parser {
         )?;
 
         return Ok(Stmt::Expression(ExpressionStmt(expr)));
+    }
+
+    fn function(&mut self, kind: LoxStr) -> Result<FunctionStmt> {
+        let name = self.consume(&TokenType::Identifier, format!("Expect {kind} name."))?;
+
+        self.consume(
+            &TokenType::LeftParen,
+            format!("Expect '(' after {kind} name."),
+        )?;
+
+        let mut parameters = vec![];
+
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if parameters.len() >= 255 {
+                    return Err(self.error(
+                        "Can't have more than 255 parameters".to_string(),
+                        self.peek().unwrap().clone(),
+                    ));
+                }
+
+                parameters.push(
+                    self.consume(&TokenType::Identifier, "Expect parameter name".to_string())?,
+                );
+
+                if !self.match_any(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(
+            &TokenType::RightParen,
+            "Expect ')' after parameters".to_string(),
+        )?;
+        self.consume(
+            &TokenType::LeftBrace,
+            format!("Expect '{{' before {kind} body."),
+        )?;
+
+        let body = self.block()?;
+
+        return Ok(FunctionStmt {
+            name,
+            params: parameters,
+            body,
+        });
     }
 
     fn block(&mut self) -> Result<Vec<Stmt>> {
