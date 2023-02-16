@@ -46,14 +46,14 @@ impl Interpreter {
 
     pub fn execute_block(
         &mut self,
-        statements: &mut Vec<Stmt>,
+        statements: &Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
     ) -> RuntimeResult<()> {
         let previous = Rc::clone(&self.environment);
 
         self.environment = environment;
 
-        let try_execute_block = || -> RuntimeResult<()> {
+        let mut try_execute_block = || -> RuntimeResult<()> {
             for statement in statements {
                 self.execute(statement)?;
             }
@@ -68,11 +68,11 @@ impl Interpreter {
         return res;
     }
 
-    fn execute(&mut self, stmt: &mut Stmt) -> RuntimeResult<()> {
+    fn execute(&mut self, stmt: &Stmt) -> RuntimeResult<()> {
         return stmt.accept(self);
     }
 
-    fn evaluate(&mut self, expr: &mut Expr) -> RuntimeResult {
+    fn evaluate(&mut self, expr: &Expr) -> RuntimeResult {
         return expr.accept(self);
     }
 
@@ -119,12 +119,12 @@ impl Interpreter {
 }
 
 impl ExprVisitor<RuntimeResult> for Interpreter {
-    fn visit_literal_expr(&mut self, expr: &mut LiteralExpr) -> RuntimeResult {
-        return Ok(RuntimeValue::from(&*expr));
+    fn visit_literal_expr(&mut self, expr: &LiteralExpr) -> RuntimeResult {
+        return Ok(RuntimeValue::from(expr));
     }
 
-    fn visit_logical_expr(&mut self, expr: &mut LogicalExpr) -> RuntimeResult {
-        let left = self.evaluate(&mut expr.left)?;
+    fn visit_logical_expr(&mut self, expr: &LogicalExpr) -> RuntimeResult {
+        let left = self.evaluate(&expr.left)?;
 
         if expr.operator.token_type == TokenType::Or {
             if self.is_truthy(&left) {
@@ -136,15 +136,15 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
             }
         }
 
-        return self.evaluate(&mut expr.right);
+        return self.evaluate(&expr.right);
     }
 
-    fn visit_grouping_expr(&mut self, expr: &mut GroupingExpr) -> RuntimeResult {
-        return self.evaluate(&mut expr.expr);
+    fn visit_grouping_expr(&mut self, expr: &GroupingExpr) -> RuntimeResult {
+        return self.evaluate(&expr.expr);
     }
 
-    fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) -> RuntimeResult {
-        let right = self.evaluate(&mut expr.right)?;
+    fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> RuntimeResult {
+        let right = self.evaluate(&expr.right)?;
 
         match expr.op.0 {
             UnaryExprOp::Not => Ok(RuntimeValue::Boolean(!self.is_truthy(&right))),
@@ -162,9 +162,9 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
         }
     }
 
-    fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) -> RuntimeResult {
-        let left = self.evaluate(&mut expr.left)?;
-        let right = self.evaluate(&mut expr.right)?;
+    fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> RuntimeResult {
+        let left = self.evaluate(&expr.left)?;
+        let right = self.evaluate(&expr.right)?;
 
         match &expr.op.0 {
             BinaryExprOp::Plus => match (left, right) {
@@ -232,11 +232,11 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
         }
     }
 
-    fn visit_call_expr(&mut self, expr: &mut CallExpr) -> RuntimeResult {
-        let callee = self.evaluate(&mut expr.callee)?;
+    fn visit_call_expr(&mut self, expr: &CallExpr) -> RuntimeResult {
+        let callee = self.evaluate(&expr.callee)?;
 
         let mut arguments = vec![];
-        for argument in &mut expr.arguments {
+        for argument in &expr.arguments {
             arguments.push(self.evaluate(argument)?);
         }
 
@@ -258,12 +258,12 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
         return function.call(self, arguments);
     }
 
-    fn visit_variable_expr(&mut self, expr: &mut VariableExpr) -> RuntimeResult {
+    fn visit_variable_expr(&mut self, expr: &VariableExpr) -> RuntimeResult {
         return self.environment.borrow().get(&expr.0);
     }
 
-    fn visit_assignment_expr(&mut self, expr: &mut AssignmentExpr) -> RuntimeResult {
-        let value = self.evaluate(&mut expr.value)?;
+    fn visit_assignment_expr(&mut self, expr: &AssignmentExpr) -> RuntimeResult {
+        let value = self.evaluate(&expr.value)?;
 
         self.environment
             .borrow_mut()
@@ -274,22 +274,22 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
 }
 
 impl StmtVisitor<RuntimeResult<()>> for Interpreter {
-    fn visit_expression_stmt(&mut self, stmt: &mut ExpressionStmt) -> RuntimeResult<()> {
-        self.evaluate(&mut stmt.0)?;
+    fn visit_expression_stmt(&mut self, stmt: &ExpressionStmt) -> RuntimeResult<()> {
+        self.evaluate(&stmt.0)?;
 
         return Ok(());
     }
 
-    fn visit_print_stmt(&mut self, stmt: &mut PrintStmt) -> RuntimeResult<()> {
-        let value = self.evaluate(&mut stmt.0)?;
+    fn visit_print_stmt(&mut self, stmt: &PrintStmt) -> RuntimeResult<()> {
+        let value = self.evaluate(&stmt.0)?;
 
         println!("{}", self.stringify(&value));
 
         return Ok(());
     }
 
-    fn visit_variable_stmt(&mut self, stmt: &mut VariableStmt) -> RuntimeResult<()> {
-        let value = if let Some(initializer) = &mut stmt.initializer {
+    fn visit_variable_stmt(&mut self, stmt: &VariableStmt) -> RuntimeResult<()> {
+        let value = if let Some(initializer) = &stmt.initializer {
             self.evaluate(initializer)?
         } else {
             RuntimeValue::Nil
@@ -302,9 +302,9 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
         return Ok(());
     }
 
-    fn visit_block_stmt(&mut self, stmt: &mut BlockStmt) -> RuntimeResult<()> {
+    fn visit_block_stmt(&mut self, stmt: &BlockStmt) -> RuntimeResult<()> {
         self.execute_block(
-            &mut stmt.0,
+            &stmt.0,
             Rc::new(RefCell::new(Environment::enclosed(Rc::clone(
                 &self.environment,
             )))),
@@ -313,30 +313,30 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
         return Ok(());
     }
 
-    fn visit_if_stmt(&mut self, stmt: &mut IfStmt) -> RuntimeResult<()> {
-        let mut condition = self.evaluate(&mut stmt.condition)?;
+    fn visit_if_stmt(&mut self, stmt: &IfStmt) -> RuntimeResult<()> {
+        let mut condition = self.evaluate(&stmt.condition)?;
 
         if self.is_truthy(&mut condition) {
-            self.execute(&mut stmt.then_branch)?;
-        } else if let Some(else_branch) = &mut stmt.else_branch {
+            self.execute(&stmt.then_branch)?;
+        } else if let Some(else_branch) = &stmt.else_branch {
             self.execute(else_branch)?;
         }
 
         return Ok(());
     }
 
-    fn visit_while_stmt(&mut self, stmt: &mut WhileStmt) -> RuntimeResult<()> {
+    fn visit_while_stmt(&mut self, stmt: &WhileStmt) -> RuntimeResult<()> {
         while {
-            let condition = self.evaluate(&mut stmt.condition)?;
+            let condition = self.evaluate(&stmt.condition)?;
             self.is_truthy(&condition)
         } {
-            self.execute(&mut stmt.body)?;
+            self.execute(&stmt.body)?;
         }
 
         return Ok(());
     }
 
-    fn visit_function_stmt(&mut self, stmt: &mut FunctionStmt) -> RuntimeResult<()> {
+    fn visit_function_stmt(&mut self, stmt: &FunctionStmt) -> RuntimeResult<()> {
         let name = stmt.name.lexeme.clone();
 
         let function = LoxFunction::new(stmt.clone(), Rc::clone(&self.environment));
@@ -349,8 +349,8 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
         return Ok(());
     }
 
-    fn visit_return_stmt(&mut self, stmt: &mut ReturnStmt) -> RuntimeResult<()> {
-        let value = if let Some(value) = &mut stmt.value {
+    fn visit_return_stmt(&mut self, stmt: &ReturnStmt) -> RuntimeResult<()> {
+        let value = if let Some(value) = &stmt.value {
             Some(self.evaluate(value)?)
         } else {
             None
