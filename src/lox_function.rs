@@ -4,7 +4,7 @@ use crate::{
     environment::Environment,
     interpreter::Interpreter,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
-    stmt::FunctionStmt,
+    ast::stmt::FunctionStmt,
 };
 
 #[derive(Debug, Clone, PartialEq)]

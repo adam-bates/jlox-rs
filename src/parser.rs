@@ -1,4 +1,10 @@
-use crate::{expr::*, lox, stmt::*, string::LoxStr, token::Token, token_type::TokenType};
+use crate::{
+    ast::{expr::*, stmt::*},
+    lox,
+    string::LoxStr,
+    token::Token,
+    token_type::TokenType,
+};
 
 pub type Result<T = ()> = std::result::Result<T, ParserError>;
 

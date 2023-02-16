@@ -1,5 +1,5 @@
 use crate::{
-    expr::*, lox_callable::LoxCallable, string::LoxStr, token::Token, token_type::TokenType,
+    ast::expr::*, lox_callable::LoxCallable, string::LoxStr, token::Token, token_type::TokenType,
 };
 
 use thiserror::Error;
@@ -68,7 +68,5 @@ pub enum RuntimeError {
     },
 
     #[error("non-error return short-circuit")]
-    NonErrorReturnShortCircuit {
-        value: Option<RuntimeValue>,
-    },
+    NonErrorReturnShortCircuit { value: Option<RuntimeValue> },
 }

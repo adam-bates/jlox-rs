@@ -1,4 +1,6 @@
-use crate::{expr::Expr, token::Token};
+use super::expr::Expr;
+
+use crate::token::Token;
 
 // Manually writing this part out
 // as it seems easier than translating the Java generation code
