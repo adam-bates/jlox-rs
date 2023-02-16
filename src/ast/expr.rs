@@ -3,6 +3,16 @@ use crate::token::Token;
 // Manually writing this part out
 // as it seems easier than translating the Java generation code
 
+static mut NEXT_EXPR_ID: usize = 0;
+
+pub fn expr_id() -> usize {
+    let id = unsafe { NEXT_EXPR_ID };
+    unsafe { NEXT_EXPR_ID += 1 };
+    return id;
+}
+
+pub type ExprId = usize;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(LiteralExpr),
@@ -15,14 +25,26 @@ pub enum Expr {
     Assignment(AssignmentExpr),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct LiteralExpr(pub LiteralExprType, pub Token);
+impl Expr {
+    pub fn id(&self) -> usize {
+        return match self {
+            Self::Literal(expr) => expr.id,
+            Self::Logical(expr) => expr.id,
+            Self::Unary(expr) => expr.id,
+            Self::Binary(expr) => expr.id,
+            Self::Call(expr) => expr.id,
+            Self::Grouping(expr) => expr.id,
+            Self::Variable(expr) => expr.id,
+            Self::Assignment(expr) => expr.id,
+        };
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LogicalExpr {
-    pub left: Box<Expr>,
-    pub operator: Token,
-    pub right: Box<Expr>,
+pub struct LiteralExpr {
+    pub id: ExprId,
+    pub literal_type: LiteralExprType,
+    pub token: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,7 +57,16 @@ pub enum LiteralExprType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct LogicalExpr {
+    pub id: ExprId,
+    pub left: Box<Expr>,
+    pub operator: Token,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnaryExpr {
+    pub id: ExprId,
     pub op: (UnaryExprOp, Token),
     pub right: Box<Expr>,
 }
@@ -48,6 +79,7 @@ pub enum UnaryExprOp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
+    pub id: ExprId,
     pub left: Box<Expr>,
     pub op: (BinaryExprOp, Token),
     pub right: Box<Expr>,
@@ -69,6 +101,7 @@ pub enum BinaryExprOp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
+    pub id: ExprId,
     pub callee: Box<Expr>,
     pub paren: Token,
     pub arguments: Vec<Expr>,
@@ -76,16 +109,21 @@ pub struct CallExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupingExpr {
+    pub id: ExprId,
     pub left: Token,
     pub expr: Box<Expr>,
     pub right: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariableExpr(pub Token);
+pub struct VariableExpr {
+    pub id: ExprId,
+    pub name: Token,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignmentExpr {
+    pub id: ExprId,
     pub name: Token,
     pub value: Box<Expr>,
 }

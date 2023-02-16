@@ -1,6 +1,6 @@
 use crate::{
-    interpreter::Interpreter, parser::Parser, runtime_value::RuntimeError, scanner::Scanner,
-    token::Token, token_type::TokenType,
+    interpreter::Interpreter, parser::Parser, resolver::Resolver, runtime_value::RuntimeError,
+    scanner::Scanner, token::Token, token_type::TokenType,
 };
 
 use std::{fs, io, path, process};
@@ -85,6 +85,9 @@ fn run(interpreter: &mut Interpreter, source: String) {
     if had_error() {
         return;
     }
+
+    let mut resolver = Resolver::new(interpreter);
+    resolver.resolve(&statements);
 
     interpreter.interpret(statements);
 }

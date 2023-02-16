@@ -6,15 +6,17 @@ use crate::{
     lox_function::LoxFunction,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
     string::LoxStr,
+    token::Token,
     token_type::TokenType,
 };
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub struct Interpreter {
     pub globals: Rc<RefCell<Environment>>,
 
     environment: Rc<RefCell<Environment>>,
+    locals: HashMap<ExprId, usize>,
 }
 
 impl Interpreter {
@@ -29,7 +31,13 @@ impl Interpreter {
         return Self {
             environment: Rc::clone(&globals),
             globals,
+
+            locals: HashMap::new(),
         };
+    }
+
+    pub fn resolve(&mut self, id: ExprId, depth: usize) {
+        self.locals.insert(id, depth);
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) {
@@ -66,6 +74,14 @@ impl Interpreter {
         self.environment = previous;
 
         return res;
+    }
+
+    fn look_up_variable(&self, name: &Token, expr_id: &ExprId) -> RuntimeResult {
+        if let Some(distance) = self.locals.get(expr_id) {
+            return Environment::get_at(Rc::clone(&self.environment), *distance, name);
+        } else {
+            return self.globals.borrow().get(name);
+        }
     }
 
     fn execute(&mut self, stmt: &Stmt) -> RuntimeResult<()> {
@@ -259,15 +275,25 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
     }
 
     fn visit_variable_expr(&mut self, expr: &VariableExpr) -> RuntimeResult {
-        return self.environment.borrow().get(&expr.0);
+        // return self.environment.borrow().get(&expr.name);
+        return self.look_up_variable(&expr.name, &expr.id);
     }
 
     fn visit_assignment_expr(&mut self, expr: &AssignmentExpr) -> RuntimeResult {
         let value = self.evaluate(&expr.value)?;
 
-        self.environment
-            .borrow_mut()
-            .assign(expr.name.clone(), value.clone())?;
+        if let Some(distance) = self.locals.get(&expr.id) {
+            Environment::assign_at(
+                Rc::clone(&self.environment),
+                *distance,
+                expr.name.clone(),
+                value.clone(),
+            )?;
+        } else {
+            self.globals
+                .borrow_mut()
+                .assign(expr.name.clone(), value.clone())?;
+        }
 
         return Ok(value);
     }
@@ -275,13 +301,13 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
 
 impl StmtVisitor<RuntimeResult<()>> for Interpreter {
     fn visit_expression_stmt(&mut self, stmt: &ExpressionStmt) -> RuntimeResult<()> {
-        self.evaluate(&stmt.0)?;
+        self.evaluate(&stmt.expr)?;
 
         return Ok(());
     }
 
     fn visit_print_stmt(&mut self, stmt: &PrintStmt) -> RuntimeResult<()> {
-        let value = self.evaluate(&stmt.0)?;
+        let value = self.evaluate(&stmt.expr)?;
 
         println!("{}", self.stringify(&value));
 
@@ -304,7 +330,7 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
 
     fn visit_block_stmt(&mut self, stmt: &BlockStmt) -> RuntimeResult<()> {
         self.execute_block(
-            &stmt.0,
+            &stmt.stmts,
             Rc::new(RefCell::new(Environment::enclosed(Rc::clone(
                 &self.environment,
             )))),

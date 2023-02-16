@@ -5,6 +5,7 @@ mod lox;
 mod lox_callable;
 mod lox_function;
 mod parser;
+mod resolver;
 mod runtime_value;
 mod scanner;
 mod string;

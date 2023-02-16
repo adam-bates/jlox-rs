@@ -95,7 +95,9 @@ impl Parser {
         }
 
         if self.match_any(&[TokenType::LeftBrace]) {
-            return Ok(Stmt::Block(BlockStmt(self.block()?)));
+            return Ok(Stmt::Block(BlockStmt {
+                stmts: self.block()?,
+            }));
         }
 
         return self.expression_statement();
@@ -178,23 +180,23 @@ impl Parser {
         let mut body = self.statement()?;
 
         if let Some(increment) = increment {
-            body = Stmt::Block(BlockStmt(vec![
-                body,
-                Stmt::Expression(ExpressionStmt(increment)),
-            ]));
+            body = Stmt::Block(BlockStmt {
+                stmts: vec![body, Stmt::Expression(ExpressionStmt { expr: increment })],
+            });
         }
 
         let condition = if let Some(condition) = condition {
             condition
         } else {
-            Expr::Literal(LiteralExpr(
-                LiteralExprType::True,
-                Token {
+            Expr::Literal(LiteralExpr {
+                id: expr_id(),
+                literal_type: LiteralExprType::True,
+                token: Token {
                     lexeme: "true".into(),
                     line: 0,
                     token_type: TokenType::True,
                 },
-            ))
+            })
         };
 
         body = Stmt::While(WhileStmt {
@@ -203,7 +205,9 @@ impl Parser {
         });
 
         if let Some(initializer) = initializer {
-            body = Stmt::Block(BlockStmt(vec![initializer, body]));
+            body = Stmt::Block(BlockStmt {
+                stmts: vec![initializer, body],
+            });
         }
 
         return Ok(body);
@@ -213,7 +217,7 @@ impl Parser {
         let value = self.expression()?;
         self.consume(&TokenType::Semicolon, "Expect ';' after value.".to_string())?;
 
-        return Ok(Stmt::Print(PrintStmt(value)));
+        return Ok(Stmt::Print(PrintStmt { expr: value }));
     }
 
     fn return_statement(&mut self) -> Result<Stmt> {
@@ -243,7 +247,7 @@ impl Parser {
             "Expect ';' after expression.".to_string(),
         )?;
 
-        return Ok(Stmt::Expression(ExpressionStmt(expr)));
+        return Ok(Stmt::Expression(ExpressionStmt { expr }));
     }
 
     fn function(&mut self, kind: LoxStr) -> Result<FunctionStmt> {
@@ -319,9 +323,9 @@ impl Parser {
             let value = self.assignment()?;
 
             if let Expr::Variable(expr) = expr {
-                let name = expr.0;
                 return Ok(Expr::Assignment(AssignmentExpr {
-                    name,
+                    id: expr_id(),
+                    name: expr.name,
                     value: Box::new(value),
                 }));
             }
@@ -343,6 +347,7 @@ impl Parser {
             let right = self.and()?;
 
             expr = Expr::Logical(LogicalExpr {
+                id: expr_id(),
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
@@ -360,6 +365,7 @@ impl Parser {
             let right = self.equality()?;
 
             expr = Expr::Logical(LogicalExpr {
+                id: expr_id(),
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
@@ -389,6 +395,7 @@ impl Parser {
             let right = self.comparison()?;
 
             expr = Expr::Binary(BinaryExpr {
+                id: expr_id(),
                 left: Box::new(expr),
                 op,
                 right: Box::new(right),
@@ -425,6 +432,7 @@ impl Parser {
             let right = self.term()?;
 
             expr = Expr::Binary(BinaryExpr {
+                id: expr_id(),
                 left: Box::new(expr),
                 op,
                 right: Box::new(right),
@@ -454,6 +462,7 @@ impl Parser {
             let right = self.factor()?;
 
             expr = Expr::Binary(BinaryExpr {
+                id: expr_id(),
                 left: Box::new(expr),
                 op,
                 right: Box::new(right),
@@ -483,6 +492,7 @@ impl Parser {
             let right = self.unary()?;
 
             expr = Expr::Binary(BinaryExpr {
+                id: expr_id(),
                 left: Box::new(expr),
                 op,
                 right: Box::new(right),
@@ -510,6 +520,7 @@ impl Parser {
             let right = self.unary()?;
 
             return Ok(Expr::Unary(UnaryExpr {
+                id: expr_id(),
                 op,
                 right: Box::new(right),
             }));
@@ -562,6 +573,7 @@ impl Parser {
         )?;
 
         return Ok(Expr::Call(CallExpr {
+            id: expr_id(),
             callee: Box::new(callee),
             paren,
             arguments,
@@ -572,15 +584,27 @@ impl Parser {
         let token = self.peek().unwrap().clone();
 
         if self.match_any(&[TokenType::False]) {
-            return Ok(Expr::Literal(LiteralExpr(LiteralExprType::False, token)));
+            return Ok(Expr::Literal(LiteralExpr {
+                id: expr_id(),
+                literal_type: LiteralExprType::False,
+                token,
+            }));
         };
 
         if self.match_any(&[TokenType::True]) {
-            return Ok(Expr::Literal(LiteralExpr(LiteralExprType::True, token)));
+            return Ok(Expr::Literal(LiteralExpr {
+                id: expr_id(),
+                literal_type: LiteralExprType::True,
+                token,
+            }));
         };
 
         if self.match_any(&[TokenType::Nil]) {
-            return Ok(Expr::Literal(LiteralExpr(LiteralExprType::Nil, token)));
+            return Ok(Expr::Literal(LiteralExpr {
+                id: expr_id(),
+                literal_type: LiteralExprType::Nil,
+                token,
+            }));
         };
 
         if self.match_any(&[
@@ -598,11 +622,18 @@ impl Parser {
                 }
             };
 
-            return Ok(Expr::Literal(LiteralExpr(literal_type, token)));
+            return Ok(Expr::Literal(LiteralExpr {
+                id: expr_id(),
+                literal_type,
+                token,
+            }));
         };
 
         if self.match_any(&[TokenType::Identifier]) {
-            return Ok(Expr::Variable(VariableExpr(token)));
+            return Ok(Expr::Variable(VariableExpr {
+                id: expr_id(),
+                name: token,
+            }));
         }
 
         if self.match_any(&[TokenType::LeftParen]) {
@@ -614,6 +645,7 @@ impl Parser {
             )?;
 
             return Ok(Expr::Grouping(GroupingExpr {
+                id: expr_id(),
                 left: token,
                 expr: Box::new(expr),
                 right: right_token,

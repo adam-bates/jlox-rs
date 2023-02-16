@@ -1,10 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    ast::stmt::FunctionStmt,
     environment::Environment,
     interpreter::Interpreter,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
-    ast::stmt::FunctionStmt,
 };
 
 #[derive(Debug, Clone, PartialEq)]

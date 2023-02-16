@@ -1,4 +1,4 @@
-use crate::{lox, token::Token, token_type::TokenType, string::LoxStr};
+use crate::{lox, string::LoxStr, token::Token, token_type::TokenType};
 
 use std::{collections::HashMap, iter::Iterator};
 

@@ -1,4 +1,4 @@
-use crate::{token_type::TokenType, string::LoxStr};
+use crate::{string::LoxStr, token_type::TokenType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {

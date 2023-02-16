@@ -18,13 +18,19 @@ pub enum Stmt {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BlockStmt(pub Vec<Stmt>);
+pub struct BlockStmt {
+    pub stmts: Vec<Stmt>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ExpressionStmt(pub Expr);
+pub struct ExpressionStmt {
+    pub expr: Expr,
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PrintStmt(pub Expr);
+pub struct PrintStmt {
+    pub expr: Expr,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableStmt {

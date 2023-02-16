@@ -18,7 +18,7 @@ pub enum RuntimeValue {
 
 impl From<&LiteralExpr> for RuntimeValue {
     fn from(value: &LiteralExpr) -> Self {
-        return match (&value.0, &value.1.token_type) {
+        return match (&value.literal_type, &value.token.token_type) {
             (LiteralExprType::Nil, _) => Self::Nil,
             (LiteralExprType::True, _) => Self::Boolean(true),
             (LiteralExprType::False, _) => Self::Boolean(false),
