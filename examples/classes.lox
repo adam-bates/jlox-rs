@@ -1,0 +1,9 @@
+class Bagel {}
+
+print Bagel;
+
+var bagel = Bagel();
+
+print bagel; // Prints "Bagel instance"
+
+

@@ -2,7 +2,7 @@ use crate::{
     ast::{expr::*, stmt::*},
     environment::Environment,
     lox,
-    lox_callable::{Clock, LoxCallable},
+    lox_callable::{Clock, LoxCall, LoxCallable},
     lox_class::LoxClass,
     lox_function::LoxFunction,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
@@ -130,9 +130,11 @@ impl Interpreter {
 
             RuntimeValue::Object(value) => return self.stringify(value),
 
-            RuntimeValue::LoxCallable(callable) => return format!("{:?}", callable).into(),
+            RuntimeValue::LoxCallable(callable) => return format!("{}", callable.to_string()).into(),
 
-            RuntimeValue::LoxClass(class) => return class.name.to_string().into(),
+            RuntimeValue::LoxInstance(instance) => {
+                return format!("{} instance", instance.class.name).into()
+            }
         }
     }
 }
@@ -394,9 +396,10 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
             .define(stmt.name.lexeme.clone(), RuntimeValue::Nil);
 
         let class = LoxClass::new(stmt.name.lexeme.clone());
-        self.environment
-            .borrow_mut()
-            .assign(stmt.name.clone(), RuntimeValue::LoxClass(class))?;
+        self.environment.borrow_mut().assign(
+            stmt.name.clone(),
+            RuntimeValue::LoxCallable(LoxCallable::LoxClass(class)),
+        )?;
 
         return Ok(());
     }

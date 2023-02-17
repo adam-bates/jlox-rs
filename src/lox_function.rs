@@ -4,7 +4,9 @@ use crate::{
     ast::stmt::FunctionStmt,
     environment::Environment,
     interpreter::Interpreter,
+    lox_callable::LoxCall,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
+    string::LoxStr,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -20,12 +22,14 @@ impl LoxFunction {
             closure,
         };
     }
+}
 
-    pub fn arity(&self) -> usize {
+impl LoxCall for LoxFunction {
+    fn arity(&self) -> usize {
         return self.declaration.params.len();
     }
 
-    pub fn call(
+    fn call(
         &mut self,
         interpreter: &mut Interpreter,
         mut arguments: Vec<RuntimeValue>,
@@ -51,5 +55,9 @@ impl LoxFunction {
             }
             Err(e) => return Err(e),
         }
+    }
+
+    fn to_string(&self) -> LoxStr {
+        return format!("<fn {}>", self.declaration.name.lexeme).into();
     }
 }
