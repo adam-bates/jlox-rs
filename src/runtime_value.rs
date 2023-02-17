@@ -1,5 +1,6 @@
 use crate::{
-    ast::expr::*, lox_callable::LoxCallable, string::LoxStr, token::Token, token_type::TokenType,
+    ast::expr::*, lox_callable::LoxCallable, lox_class::LoxClass, string::LoxStr, token::Token,
+    token_type::TokenType,
 };
 
 use thiserror::Error;
@@ -14,6 +15,7 @@ pub enum RuntimeValue {
     String(LoxStr),
     Object(Box<RuntimeValue>),
     LoxCallable(LoxCallable),
+    LoxClass(LoxClass),
 }
 
 impl From<&LiteralExpr> for RuntimeValue {

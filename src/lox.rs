@@ -89,6 +89,11 @@ fn run(interpreter: &mut Interpreter, source: String) {
     let mut resolver = Resolver::new(interpreter);
     resolver.resolve(&statements);
 
+    // Stop if there was a resolution error
+    if had_error() {
+        return;
+    }
+
     interpreter.interpret(statements);
 }
 

@@ -36,6 +36,10 @@ impl Parser {
 
     fn declaration(&mut self) -> Option<Stmt> {
         fn try_declaration(this: &mut Parser) -> Result<Stmt> {
+            if this.match_any(&[TokenType::Class]) {
+                return this.class_declaration();
+            }
+
             if this.match_any(&[TokenType::Fun]) {
                 return Ok(Stmt::Function(this.function("function".into())?));
             }
@@ -54,6 +58,26 @@ impl Parser {
                 return None;
             }
         }
+    }
+
+    fn class_declaration(&mut self) -> Result<Stmt> {
+        let name = self.consume(&TokenType::Identifier, "Expect class name".to_string())?;
+        self.consume(
+            &TokenType::LeftBrace,
+            "Expect '{' before class body".to_string(),
+        )?;
+
+        let mut methods = vec![];
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(self.function("method".into())?);
+        }
+
+        self.consume(
+            &TokenType::RightBrace,
+            "Expect '}' after class body".to_string(),
+        )?;
+
+        return Ok(Stmt::Class(ClassStmt { name, methods }));
     }
 
     fn var_declaration(&mut self) -> Result<Stmt> {

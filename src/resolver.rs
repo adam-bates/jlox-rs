@@ -8,9 +8,16 @@ use crate::{
     token::Token,
 };
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FunctionType {
+    None,
+    Function,
+}
+
 pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     scopes: Vec<HashMap<LoxStr, bool>>,
+    current_function: FunctionType,
 }
 
 impl<'a> Resolver<'a> {
@@ -18,6 +25,7 @@ impl<'a> Resolver<'a> {
         return Self {
             interpreter,
             scopes: vec![],
+            current_function: FunctionType::None,
         };
     }
 
@@ -35,6 +43,13 @@ impl<'a> Resolver<'a> {
 
     fn declare(&mut self, name: &Token) {
         if let Some(scope) = self.scopes.last_mut() {
+            if scope.contains_key(&name.lexeme) {
+                lox::token_error(
+                    name.clone(),
+                    "Already a variable with this name in this scope",
+                );
+            }
+
             scope.insert(name.lexeme.clone(), false);
         }
     }
@@ -60,6 +75,10 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
+        if self.scopes.len() == 0 {
+            return;
+        }
+
         let mut i = self.scopes.len() - 1;
 
         loop {
@@ -77,7 +96,10 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn resolve_function(&mut self, function: &FunctionStmt) {
+    fn resolve_function(&mut self, function: &FunctionStmt, function_type: FunctionType) {
+        let enclosing_function = self.current_function;
+        self.current_function = function_type;
+
         self.begin_scope();
 
         for param in &function.params {
@@ -88,6 +110,8 @@ impl<'a> Resolver<'a> {
         self.resolve_stmts(&function.body);
 
         self.end_scope();
+
+        self.current_function = enclosing_function;
     }
 }
 
@@ -163,7 +187,7 @@ impl StmtVisitor<()> for Resolver<'_> {
     fn visit_function_stmt(&mut self, stmt: &FunctionStmt) -> () {
         self.declare(&stmt.name);
         self.define(&stmt.name);
-        self.resolve_function(stmt);
+        self.resolve_function(stmt, FunctionType::Function);
     }
 
     fn visit_expression_stmt(&mut self, stmt: &ExpressionStmt) -> () {
@@ -184,6 +208,10 @@ impl StmtVisitor<()> for Resolver<'_> {
     }
 
     fn visit_return_stmt(&mut self, stmt: &ReturnStmt) -> () {
+        if self.current_function == FunctionType::None {
+            lox::token_error(stmt.keyword.clone(), "Can't return from top-level code");
+        }
+
         if let Some(value) = &stmt.value {
             self.resolve_expr(value);
         }
@@ -193,4 +221,10 @@ impl StmtVisitor<()> for Resolver<'_> {
         self.resolve_expr(&stmt.condition);
         self.resolve_stmt(&stmt.body);
     }
+
+    fn visit_class_stmt(&mut self, stmt: &ClassStmt) -> () {
+        self.declare(&stmt.name);
+        self.define(&stmt.name);
+    }
 }
+

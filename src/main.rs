@@ -3,6 +3,7 @@ mod environment;
 mod interpreter;
 mod lox;
 mod lox_callable;
+mod lox_class;
 mod lox_function;
 mod parser;
 mod resolver;
