@@ -163,6 +163,10 @@ impl ExprVisitor<()> for Resolver<'_> {
     fn visit_unary_expr(&mut self, expr: &UnaryExpr) -> () {
         self.resolve_expr(&expr.right);
     }
+
+    fn visit_get_expr(&mut self, expr: &GetExpr) -> () {
+        self.resolve_expr(&expr.object);
+    }
 }
 
 impl StmtVisitor<()> for Resolver<'_> {
@@ -227,4 +231,3 @@ impl StmtVisitor<()> for Resolver<'_> {
         self.define(&stmt.name);
     }
 }
-

@@ -130,7 +130,9 @@ impl Interpreter {
 
             RuntimeValue::Object(value) => return self.stringify(value),
 
-            RuntimeValue::LoxCallable(callable) => return format!("{}", callable.to_string()).into(),
+            RuntimeValue::LoxCallable(callable) => {
+                return format!("{}", callable.to_string()).into()
+            }
 
             RuntimeValue::LoxInstance(instance) => {
                 return format!("{} instance", instance.class.name).into()
@@ -301,6 +303,19 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
         }
 
         return Ok(value);
+    }
+
+    fn visit_get_expr(&mut self, expr: &GetExpr) -> RuntimeResult {
+        let object = self.evaluate(&expr.object)?;
+
+        if let RuntimeValue::LoxInstance(instance) = object {
+            return instance.get(&expr.name);
+        }
+
+        return Err(RuntimeError::InvalidGetExpr {
+            name: expr.name.clone(),
+            details: Some("Only instances have properties".to_string()),
+        });
     }
 }
 

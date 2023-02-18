@@ -556,16 +556,23 @@ impl Parser {
     fn call(&mut self) -> Result<Expr> {
         let mut expr = self.primary()?;
 
-        // loop {
-        //     if self.match_any(&[TokenType::LeftParen]) {
-        //         expr = self.finish_call(expr)?;
-        //     } else {
-        //         break;
-        //     }
-        // }
+        loop {
+            if self.match_any(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else if self.match_any(&[TokenType::Dot]) {
+                let name = self.consume(
+                    &TokenType::Identifier,
+                    "Expect property name '.'".to_string(),
+                )?;
 
-        while self.match_any(&[TokenType::LeftParen]) {
-            expr = self.finish_call(expr)?;
+                expr = Expr::Get(GetExpr {
+                    id: expr_id(),
+                    object: Box::new(expr),
+                    name,
+                });
+            } else {
+                break;
+            }
         }
 
         return Ok(expr);

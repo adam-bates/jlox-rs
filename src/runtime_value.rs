@@ -50,8 +50,20 @@ pub enum RuntimeError {
         details: Option<String>,
     },
 
+    #[error("invalid get expression: {name:#?}. Details = {details:?}")]
+    InvalidGetExpr {
+        name: Token,
+        details: Option<String>,
+    },
+
     #[error("undefined variable: {name:#?}. Details = {details:?}")]
     UndefinedVariable {
+        name: Token,
+        details: Option<String>,
+    },
+
+    #[error("undefined property: {name:#?}. Details = {details:?}")]
+    UndefinedProperty {
         name: Token,
         details: Option<String>,
     },
