@@ -5,6 +5,7 @@ use crate::{
     environment::Environment,
     interpreter::Interpreter,
     lox_callable::LoxCall,
+    lox_instance::LoxInstance,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
     string::LoxStr,
 };
@@ -21,6 +22,12 @@ impl LoxFunction {
             declaration,
             closure,
         };
+    }
+
+    pub fn bind(&self, instance: LoxInstance) -> Self {
+        let mut environment = Environment::enclosed(Rc::clone(&self.closure));
+        environment.define("this".into(), RuntimeValue::LoxInstance(instance));
+        return Self::new(self.declaration.clone(), Rc::new(RefCell::new(environment)));
     }
 }
 

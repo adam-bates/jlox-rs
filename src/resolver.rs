@@ -12,6 +12,7 @@ use crate::{
 enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver<'a> {
@@ -167,6 +168,15 @@ impl ExprVisitor<()> for Resolver<'_> {
     fn visit_get_expr(&mut self, expr: &GetExpr) -> () {
         self.resolve_expr(&expr.object);
     }
+
+    fn visit_set_expr(&mut self, expr: &SetExpr) -> () {
+        self.resolve_expr(&expr.value);
+        self.resolve_expr(&expr.object);
+    }
+
+    fn visit_this_expr(&mut self, expr: &ThisExpr) -> () {
+        self.resolve_local(&Expr::This(expr.clone()), &expr.keyword);
+    }
 }
 
 impl StmtVisitor<()> for Resolver<'_> {
@@ -229,5 +239,17 @@ impl StmtVisitor<()> for Resolver<'_> {
     fn visit_class_stmt(&mut self, stmt: &ClassStmt) -> () {
         self.declare(&stmt.name);
         self.define(&stmt.name);
+
+        self.begin_scope();
+        if let Some(scope) = self.scopes.last_mut() {
+            scope.insert("this".into(), true);
+        }
+
+        for method in &stmt.methods {
+            let declaration = FunctionType::Method;
+            self.resolve_function(method, declaration);
+        }
+
+        self.end_scope();
     }
 }

@@ -1,9 +1,30 @@
-class Bagel {}
+class Person {
+    say_hi(name) {
+        if (name == nil) {
+            name = "world";
+        }
 
-print Bagel;
+        return "Hello " + name + "!";
+    }
+}
 
-var bagel = Bagel();
+print Person;
 
-print bagel; // Prints "Bagel instance"
+var adam = Person();
 
+print adam;
+
+print adam.say_hi(nil);
+print adam.say_hi("Adam");
+
+
+class Cake {
+    taste(adjective) {
+        print "The " + this.flavor + " cake is " + adjective + "!";
+    }
+}
+
+var cake = Cake();
+cake.flavor = "German chocolate";
+cake.taste("delicious");
 

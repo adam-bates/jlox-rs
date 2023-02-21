@@ -13,7 +13,6 @@ pub enum RuntimeValue {
     Boolean(bool),
     Number(f64),
     String(LoxStr),
-    Object(Box<RuntimeValue>),
     LoxCallable(LoxCallable),
     LoxInstance(LoxInstance),
 }
@@ -52,6 +51,12 @@ pub enum RuntimeError {
 
     #[error("invalid get expression: {name:#?}. Details = {details:?}")]
     InvalidGetExpr {
+        name: Token,
+        details: Option<String>,
+    },
+
+    #[error("invalid set expression: {name:#?}. Details = {details:?}")]
+    InvalidSetExpr {
         name: Token,
         details: Option<String>,
     },

@@ -352,6 +352,13 @@ impl Parser {
                     name: expr.name,
                     value: Box::new(value),
                 }));
+            } else if let Expr::Get(expr) = expr {
+                return Ok(Expr::Set(SetExpr {
+                    id: expr_id(),
+                    object: expr.object,
+                    name: expr.name,
+                    value: Box::new(value),
+                }));
             }
 
             return Err(self.error(
@@ -659,6 +666,13 @@ impl Parser {
                 token,
             }));
         };
+
+        if self.match_any(&[TokenType::This]) {
+            return Ok(Expr::This(ThisExpr {
+                id: expr_id(),
+                keyword: token,
+            }));
+        }
 
         if self.match_any(&[TokenType::Identifier]) {
             return Ok(Expr::Variable(VariableExpr {

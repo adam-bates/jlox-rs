@@ -128,8 +128,6 @@ impl Interpreter {
 
             RuntimeValue::Boolean(value) => return value.to_string().into(),
 
-            RuntimeValue::Object(value) => return self.stringify(value),
-
             RuntimeValue::LoxCallable(callable) => {
                 return format!("{}", callable.to_string()).into()
             }
@@ -317,6 +315,27 @@ impl ExprVisitor<RuntimeResult> for Interpreter {
             details: Some("Only instances have properties".to_string()),
         });
     }
+
+    fn visit_set_expr(&mut self, expr: &SetExpr) -> RuntimeResult {
+        let object = self.evaluate(&expr.object)?;
+
+        let RuntimeValue::LoxInstance(mut instance) = object else {
+            return Err(RuntimeError::InvalidSetExpr {
+                name: expr.name.clone(),
+                details: Some("Only instances have fields".to_string()),
+            });
+        };
+
+        let value = self.evaluate(&expr.value)?;
+
+        instance.set(expr.name.clone(), value.clone());
+
+        return Ok(value);
+    }
+
+    fn visit_this_expr(&mut self, expr: &ThisExpr) -> RuntimeResult {
+        return self.look_up_variable(&expr.keyword, &expr.id);
+    }
 }
 
 impl StmtVisitor<RuntimeResult<()>> for Interpreter {
@@ -410,7 +429,14 @@ impl StmtVisitor<RuntimeResult<()>> for Interpreter {
             .borrow_mut()
             .define(stmt.name.lexeme.clone(), RuntimeValue::Nil);
 
-        let class = LoxClass::new(stmt.name.lexeme.clone());
+        let mut methods = HashMap::new();
+        for method in &stmt.methods {
+            let function = LoxFunction::new(method.clone(), Rc::clone(&self.environment));
+
+            methods.insert(method.name.lexeme.clone(), function);
+        }
+
+        let class = LoxClass::new(stmt.name.lexeme.clone(), Rc::new(RefCell::new(methods)));
         self.environment.borrow_mut().assign(
             stmt.name.clone(),
             RuntimeValue::LoxCallable(LoxCallable::LoxClass(class)),
