@@ -15,10 +15,17 @@ enum FunctionType {
     Method,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ClassType {
+    None,
+    Class,
+}
+
 pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     scopes: Vec<HashMap<LoxStr, bool>>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 impl<'a> Resolver<'a> {
@@ -27,6 +34,7 @@ impl<'a> Resolver<'a> {
             interpreter,
             scopes: vec![],
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         };
     }
 
@@ -175,6 +183,11 @@ impl ExprVisitor<()> for Resolver<'_> {
     }
 
     fn visit_this_expr(&mut self, expr: &ThisExpr) -> () {
+        if self.current_class == ClassType::None {
+            lox::token_error(expr.keyword.clone(), "Can't use 'this' outside of a class");
+            return;
+        }
+
         self.resolve_local(&Expr::This(expr.clone()), &expr.keyword);
     }
 }
@@ -237,6 +250,9 @@ impl StmtVisitor<()> for Resolver<'_> {
     }
 
     fn visit_class_stmt(&mut self, stmt: &ClassStmt) -> () {
+        let enclosing_class = self.current_class;
+        self.current_class = ClassType::Class;
+
         self.declare(&stmt.name);
         self.define(&stmt.name);
 
@@ -251,5 +267,7 @@ impl StmtVisitor<()> for Resolver<'_> {
         }
 
         self.end_scope();
+
+        self.current_class = enclosing_class;
     }
 }
