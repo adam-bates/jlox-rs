@@ -34,15 +34,24 @@ impl LoxClass {
 
 impl LoxCall for LoxClass {
     fn arity(&self) -> usize {
-        return 0;
+        match Self::find_method(&self.methods.borrow(), &"init".into()) {
+            Some(initializer) => return initializer.arity(),
+            None => return 0,
+        }
     }
 
     fn call(
         &mut self,
-        _interpreter: &mut Interpreter,
-        _arguments: Vec<RuntimeValue>,
+        interpreter: &mut Interpreter,
+        arguments: Vec<RuntimeValue>,
     ) -> RuntimeResult {
         let instance = LoxInstance::new(self.clone());
+
+        if let Some(initializer) = Self::find_method(&self.methods.borrow(), &"init".into()) {
+            initializer
+                .bind(instance.clone())
+                .call(interpreter, arguments)?;
+        }
 
         return Ok(RuntimeValue::LoxInstance(instance));
     }

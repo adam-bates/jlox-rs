@@ -12,6 +12,7 @@ use crate::{
 enum FunctionType {
     None,
     Function,
+    Initializer,
     Method,
 }
 
@@ -240,6 +241,13 @@ impl StmtVisitor<()> for Resolver<'_> {
         }
 
         if let Some(value) = &stmt.value {
+            if self.current_function == FunctionType::Initializer {
+                lox::token_error(
+                    stmt.keyword.clone(),
+                    "Can't return a value from an initializer",
+                );
+            }
+
             self.resolve_expr(value);
         }
     }
@@ -262,7 +270,11 @@ impl StmtVisitor<()> for Resolver<'_> {
         }
 
         for method in &stmt.methods {
-            let declaration = FunctionType::Method;
+            let declaration = match method.name.lexeme.as_ref() {
+                "init" => FunctionType::Initializer,
+                _ => FunctionType::Method,
+            };
+
             self.resolve_function(method, declaration);
         }
 

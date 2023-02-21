@@ -8,26 +8,38 @@ use crate::{
     lox_instance::LoxInstance,
     runtime_value::{RuntimeError, RuntimeResult, RuntimeValue},
     string::LoxStr,
+    token::Token,
+    token_type::TokenType,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoxFunction {
     pub declaration: FunctionStmt,
     pub closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl LoxFunction {
-    pub fn new(declaration: FunctionStmt, closure: Rc<RefCell<Environment>>) -> Self {
+    pub fn new(
+        declaration: FunctionStmt,
+        closure: Rc<RefCell<Environment>>,
+        is_initializer: bool,
+    ) -> Self {
         return Self {
             declaration,
             closure,
+            is_initializer,
         };
     }
 
     pub fn bind(&self, instance: LoxInstance) -> Self {
         let mut environment = Environment::enclosed(Rc::clone(&self.closure));
         environment.define("this".into(), RuntimeValue::LoxInstance(instance));
-        return Self::new(self.declaration.clone(), Rc::new(RefCell::new(environment)));
+        return Self::new(
+            self.declaration.clone(),
+            Rc::new(RefCell::new(environment)),
+            self.is_initializer,
+        );
     }
 }
 
@@ -50,18 +62,43 @@ impl LoxCall for LoxFunction {
             environment.define(param.clone(), arg);
         }
 
-        match interpreter.execute_block(
+        if let Err(e) = interpreter.execute_block(
             &mut self.declaration.body,
             Rc::new(RefCell::new(environment)),
         ) {
-            Ok(()) => {
-                return Ok(RuntimeValue::Nil);
+            match e {
+                RuntimeError::NonErrorReturnShortCircuit { value } => {
+                    if self.is_initializer {
+                        return Environment::get_at(
+                            Rc::clone(&self.closure),
+                            0,
+                            &Token {
+                                token_type: TokenType::This,
+                                lexeme: "this".into(),
+                                line: 0,
+                            },
+                        );
+                    }
+
+                    return Ok(value.unwrap_or_else(|| RuntimeValue::Nil));
+                }
+                e => return Err(e),
             }
-            Err(RuntimeError::NonErrorReturnShortCircuit { value }) => {
-                return Ok(value.unwrap_or_else(|| RuntimeValue::Nil));
-            }
-            Err(e) => return Err(e),
         }
+
+        if self.is_initializer {
+            return Environment::get_at(
+                Rc::clone(&self.closure),
+                0,
+                &Token {
+                    token_type: TokenType::This,
+                    lexeme: "this".into(),
+                    line: 0,
+                },
+            );
+        }
+
+        return Ok(RuntimeValue::Nil);
     }
 
     fn to_string(&self) -> LoxStr {
